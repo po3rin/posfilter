@@ -1,6 +1,6 @@
 # posfilter
 
-<img src="https://img.shields.io/badge/go-v1.13-blue.svg"/>
+<img src="https://img.shields.io/badge/go-v1.13-blue.svg"/> [![GoDoc](https://godoc.org/github.com/po3rin/posfilter?status.svg)](https://godoc.org/github.com/po3rin/posfilter)
 
 this package lets you to tokenize & filter words by part of speech.
 Depends on Sudachi tokenizer.

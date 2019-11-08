@@ -47,11 +47,18 @@ func TestPosFilter(t *testing.T) {
 		tt := tt
 		t.Run(tt.text, func(t *testing.T) {
 			t.Parallel()
-			var filter posfilter.PosFilter
+
+			filter, err := posfilter.NewPosFilter()
+			defer filter.Close()
+			if err != nil {
+				t.Fatalf("unexpected fatal error: %v", err)
+			}
+
 			got, err := filter.Do(tt.text)
 			if err != nil {
 				t.Errorf("unexpected err: %v", err)
 			}
+
 			if err := equalSlice(t, tt.want, got); err != nil {
 				t.Error(err)
 			}

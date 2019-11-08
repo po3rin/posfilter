@@ -145,60 +145,77 @@ func posFilter(tokenizer *gosudachi.JapaneseTokenizer, mode string, text string,
 // PosFilter filter part of speech with target pos map.
 type PosFilter struct {
 	tokenizer        *gosudachi.JapaneseTokenizer
+	dict             *gosudachi.JapaneseDictionary
 	targetPos        map[string]struct{}
 	settingFilePath  string
 	resourcesDirPath string
 	mode             string
 }
 
+// OptionFunc sets settings.
+type OptionFunc func(*PosFilter)
+
 // NewPosFilter inits PosFilter.
-func NewPosFilter() *PosFilter {
-	return &PosFilter{}
-}
+func NewPosFilter(options ...OptionFunc) (*PosFilter, error) {
 
-// SetMode sets split mode(A or B or C). default mode is C.
-func (p *PosFilter) SetMode(mode string) *PosFilter {
-	p.mode = mode
-	return p
-}
-
-// SetTargetPos sets customs target of part of speech.
-func (p *PosFilter) SetTargetPos(targets []string) *PosFilter {
-	targetPos := make(map[string]struct{}, len(targets))
-	for _, t := range targets {
-		targetPos[t] = struct{}{}
+	p := &PosFilter{
+		targetPos: defaultTargetPos,
+		mode:      ModeC,
 	}
-	p.targetPos = targetPos
-	return p
+
+	for _, option := range options {
+		option(p)
+	}
+
+	dict, err := initDict(p.settingFilePath, p.resourcesDirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	p.dict = dict
+	p.tokenizer = dict.Create()
+
+	return p, nil
+}
+
+// ModeOption sets split mode(A or B or C). default mode is C.
+func ModeOption(mode string) OptionFunc {
+	return func(p *PosFilter) {
+		p.mode = mode
+	}
+}
+
+// TargetPosOption sets customs target of part of speech.
+func TargetPosOption(targets []string) OptionFunc {
+	return func(p *PosFilter) {
+		targetPos := make(map[string]struct{}, len(targets))
+		for _, t := range targets {
+			targetPos[t] = struct{}{}
+		}
+		p.targetPos = targetPos
+	}
 }
 
 // SetSettingFilePath sets file path of json settings.
-func (p *PosFilter) SetSettingFilePath(settingFilePath string) *PosFilter {
-	p.settingFilePath = settingFilePath
-	return p
+func SetSettingFilePath(settingFilePath string) OptionFunc {
+	return func(p *PosFilter) {
+		p.settingFilePath = settingFilePath
+	}
 }
 
 // SetResourcesDirPath sets path of root directory of resources.
-func (p *PosFilter) SetResourcesDirPath(resourcesDirPath string) *PosFilter {
-	p.resourcesDirPath = resourcesDirPath
-	return p
+func SetResourcesDirPath(resourcesDirPath string) OptionFunc {
+	return func(p *PosFilter) {
+		p.resourcesDirPath = resourcesDirPath
+	}
 }
 
 // Do exec tokenize & filter part of speech.
 func (p *PosFilter) Do(text string) ([]string, error) {
-	if p.tokenizer == nil {
-		dict, err := initDict(p.settingFilePath, p.resourcesDirPath)
-		if err != nil {
-			return nil, err
-		}
-		defer dict.Close()
-		p.tokenizer = dict.Create()
-	}
-	if p.mode == "" {
-		p.mode = ModeC
-	}
-	if p.targetPos == nil {
-		p.targetPos = defaultTargetPos
-	}
 	return posFilter(p.tokenizer, p.mode, text, p.targetPos)
+}
+
+// Close closes dictionary.
+func (p *PosFilter) Close() {
+	p.dict.Close()
 }
